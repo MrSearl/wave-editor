@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Waveform Editor</title>
+    <script src="https://unpkg.com/wavesurfer.js@6/dist/wavesurfer.min.js"></script>
+    <script src="https://unpkg.com/wavesurfer.js@6/dist/plugin/wavesurfer.regions.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.0/lame.min.js"></script>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f0f3f7;
+        margin: 0;
+        padding: 2rem;
+        color: #333;
+      }
+
+      .editor-container {
+        max-width: 1200px;
+        margin: 3rem auto;
+        padding: 2rem;
+        background: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        border: 1px solid #ddd;
+      }
+
+      h2 {
+        margin-bottom: 1rem;
+        color: #2c3e50;
+        font-size: 1.8rem;
+      }
+
+      #waveform {
+        width: 100%;
+        height: 320px;
+        background-color: #ffffff;
+        border: 1px solid #ccc;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        margin-bottom: 1rem;
+        overflow: hidden;
+      }
+
+      input[type="file"] {
+        margin-bottom: 1rem;
+        font-size: 1rem;
+      }
+
+      .buttons {
+        margin-top: 1rem;
+      }
+
+      button {
+        background-color: #3498db;
+        color: white;
+        font-size: 1rem;
+        padding: 0.6rem 1.2rem;
+        margin: 0.4rem 0.4rem 0 0;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+      }
+
+      button:hover {
+        background-color: #2980b9;
+      }
+
+      button:active {
+        transform: scale(0.97);
+      }
+
+      ::selection {
+        background: #3498db33;
+      }
+
+      /* Make selection borders thinner */
+      .wavesurfer-handle {
+        width: 2px !important; /* thinner than the default 4px */
+        background-color: rgba(0, 0, 0, 0.3) !important; /* soft black */
+      }
+
+      #playPauseBtn {
+        width: 100px; /* Adjust as needed to fit both "Play" and "Pause" comfortably */
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="editor-container">
+      <h2>Waveform Editor with Trim</h2>
+
+      <input type="file" id="audioFile" accept="audio/*" />
+      <div id="waveform"></div>
+
+      <div class="buttons">
+        <button type="button" id="playPauseBtn">Play</button>
+        <button type="button" id="downloadBtn">Trim & Download</button>
+        <button type="button" id="toggleLoop">Loop Selection: Off</button>
+        <button type="button" id="jumpToStart">Jump to Selection Start</button>
+      </div>
+    </div>
+
+    <script>
+      const wavesurfer = WaveSurfer.create({
+        container: "#waveform",
+        waveColor: "#2c3e50",
+        progressColor: "#1abc9c",
+        cursorColor: "#e74c3c",
+        height: 320,
+        barWidth: 1,
+        barGap: 1,
+        barRadius: 2,
+        responsive: true,
+        plugins: [WaveSurfer.regions.create()],
+      });
+
+      let currentZoom = 0;
+
+      const playPauseBtn = document.getElementById("playPauseBtn");
+      const loopToggleBtn = document.getElementById("toggleLoop");
+      const jumpBtn = document.getElementById("jumpToStart");
+
+      // File loader
+      document
+        .getElementById("audioFile")
+        .addEventListener("change", function (e) {
+          const file = e.target.files[0];
+          if (file) {
+            const objectUrl = URL.createObjectURL(file);
+            wavesurfer.load(objectUrl);
+            playPauseBtn.textContent = "Play";
+          }
+        });
+
+      // Wavesurfer setup
+      wavesurfer.on("ready", () => {
+        wavesurfer.enableDragSelection({ color: "rgba(241, 196, 15, 0.3)" });
+
+        wavesurfer.on("region-created", function (newRegion) {
+          Object.values(wavesurfer.regions.list).forEach((region) => {
+            if (region.id !== newRegion.id) region.remove();
+          });
+          newRegion.loop = false;
+          loopToggleBtn.textContent = "Loop Selection: Off";
+        });
+
+        wavesurfer.on("region-in", (region) => {
+          if (region.loop) region.play();
+        });
+      });
+
+      // Playback label update
+      wavesurfer.on("play", () => {
+        playPauseBtn.textContent = "Pause";
+      });
+
+      wavesurfer.on("pause", () => {
+        playPauseBtn.textContent = "Play";
+      });
+
+      // Spacebar play/pause
+      document.addEventListener("keydown", function (e) {
+        if (e.code === "Space") {
+          e.preventDefault();
+          wavesurfer.playPause();
+        }
+      });
+
+      // Ctrl + Wheel zoom
+      document.getElementById("waveform").addEventListener("wheel", (e) => {
+        if (e.ctrlKey) {
+          e.preventDefault();
+          currentZoom += e.deltaY < 0 ? 10 : -10;
+          currentZoom = Math.max(0, currentZoom);
+          wavesurfer.zoom(currentZoom);
+        }
+      });
+
+      // Button handlers
+      playPauseBtn.addEventListener("click", () => {
+        wavesurfer.playPause();
+      });
+
+      loopToggleBtn.addEventListener("click", () => {
+        const region = Object.values(wavesurfer.regions.list)[0];
+        if (!region) return alert("Please select a region first.");
+        region.loop = !region.loop;
+        loopToggleBtn.textContent = `Loop Selection: ${
+          region.loop ? "On" : "Off"
+        }`;
+      });
+
+      jumpBtn.addEventListener("click", () => {
+        const region = Object.values(wavesurfer.regions.list)[0];
+        if (!region) return alert("Please select a region first.");
+        wavesurfer.seekTo(region.start / wavesurfer.getDuration());
+      });
+
+      document
+        .getElementById("downloadBtn")
+        .addEventListener("click", downloadTrimmed);
+
+      async function downloadTrimmed() {
+        const region = Object.values(wavesurfer.regions.list)[0];
+        if (!region) return alert("Please select a region first.");
+
+        const start = region.start;
+        const end = region.end;
+        const audioBuffer = wavesurfer.backend.buffer;
+        const sampleRate = audioBuffer.sampleRate;
+        const startSample = Math.floor(start * sampleRate);
+        const endSample = Math.floor(end * sampleRate);
+        const length = endSample - startSample;
+
+        const trimmedLeft = audioBuffer
+          .getChannelData(0)
+          .slice(startSample, endSample);
+        const trimmedRight =
+          audioBuffer.numberOfChannels > 1
+            ? audioBuffer.getChannelData(1).slice(startSample, endSample)
+            : trimmedLeft;
+
+        const pcm = new Int16Array(length);
+        for (let i = 0; i < length; i++) {
+          pcm[i] =
+            Math.max(-1, Math.min(1, (trimmedLeft[i] + trimmedRight[i]) / 2)) *
+            32767;
+        }
+
+        const mp3Encoder = new lamejs.Mp3Encoder(1, sampleRate, 320);
+        const mp3Data = [];
+        const chunkSize = 1152;
+
+        for (let i = 0; i < pcm.length; i += chunkSize) {
+          const sampleChunk = pcm.subarray(i, i + chunkSize);
+          const mp3buf = mp3Encoder.encodeBuffer(sampleChunk);
+          if (mp3buf.length > 0) mp3Data.push(mp3buf);
+        }
+
+        const mp3buf = mp3Encoder.flush();
+        if (mp3buf.length > 0) mp3Data.push(mp3buf);
+        const mp3Blob = new Blob(mp3Data, { type: "audio/mp3" });
+
+        const fileInput = document.getElementById("audioFile");
+        const originalName =
+          fileInput.files[0]?.name?.replace(/\.[^/.]+$/, "") || "Audio";
+
+        const now = new Date();
+        const pad = (n) => n.toString().padStart(2, "0");
+        const day = pad(now.getDate());
+        const month = pad(now.getMonth() + 1);
+        const year = now.getFullYear();
+        const hours = pad(now.getHours());
+        const minutes = pad(now.getMinutes());
+        const timestamp = `${day}.${month}.${year} ${hours}:${minutes}`;
+        const finalName = `${originalName} Extract ${timestamp}.mp3`;
+
+        const url = URL.createObjectURL(mp3Blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = finalName;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    </script>
+  </body>
+</html>

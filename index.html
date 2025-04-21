@@ -121,10 +121,11 @@
 
       if (fileId) {
         const proxyUrl = `https://script.google.com/a/macros/colchesteracademy.org.uk/s/AKfycbzmGvbjLpsOXkvnvhofgyvtCaFptxfeP5EnmDDcMyO387bUPvNrpODkrDCPB6DgDMdgew/exec?fileId=${fileId}`;
-        wavesurfer
-          .load(proxyUrl)
-          .then(() => console.log("Waveform loaded from proxy"))
-          .catch((err) => console.error("Error loading via proxy:", err));
+        wavesurfer.load(proxyUrl);
+
+        wavesurfer.on("ready", () => {
+          console.log("Waveform loaded from proxy");
+        });
       }
 
       let currentZoom = 0;

@@ -120,10 +120,12 @@
           WaveSurfer.regions.create(),
           WaveSurfer.timeline.create({
             container: "#timeline",
+            fontSize: 14, // ⬅️ Increase this value to make labels larger
+
             height: 15,
             notchPercentHeight: 90,
-            timeInterval: 5,
-            primaryLabelInterval: 5,
+            timeInterval: 10,
+            primaryLabelInterval: 3,
             secondaryLabelInterval: 1,
             primaryFontColor: "#383838",
             secondaryFontColor: "#383838",

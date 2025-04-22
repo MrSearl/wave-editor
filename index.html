@@ -5,6 +5,7 @@
     <title>Waveform Editor</title>
     <script src="https://unpkg.com/wavesurfer.js@6/dist/wavesurfer.min.js"></script>
     <script src="https://unpkg.com/wavesurfer.js@6/dist/plugin/wavesurfer.regions.min.js"></script>
+    <script src="https://unpkg.com/wavesurfer.js@6/dist/plugin/wavesurfer.timeline.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.0/lame.min.js"></script>
     <style>
       body {
@@ -92,6 +93,8 @@
       <h2>Audio Extractor</h2>
 
       <input type="file" id="audioFile" accept="audio/*" />
+      <div id="timeline"></div>
+
       <div id="waveform"></div>
 
       <div class="buttons">
@@ -113,7 +116,19 @@
         barGap: 1,
         barRadius: 2,
         responsive: true,
-        plugins: [WaveSurfer.regions.create()],
+        plugins: [
+          WaveSurfer.regions.create(),
+          WaveSurfer.timeline.create({
+            container: "#timeline",
+            height: 15,
+            notchPercentHeight: 90,
+            timeInterval: 5,
+            primaryLabelInterval: 5,
+            secondaryLabelInterval: 1,
+            primaryFontColor: "#383838",
+            secondaryFontColor: "#383838",
+          }),
+        ],
       });
 
       const urlParams = new URLSearchParams(window.location.search);
